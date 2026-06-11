@@ -37,6 +37,9 @@ const makeSupabaseMock = () => {
         _filters[`${col}__in`] = vals;
         return chain;
       },
+      or(expr) {
+        return chain;
+      },
       order() {
         return chain;
       },
@@ -45,7 +48,7 @@ const makeSupabaseMock = () => {
       },
       // Resolve the chain
       then(resolve) {
-        if (table === "notifications" && _operation === "update" && _isFilters["push_claimed_at"] === null) {
+        if (table === "notifications" && _operation === "update" && _isFilters["push_sent_at"] === null) {
           // Atomic claim: only return rows not yet claimed
           const unclaimed = dbRows.filter(
             (r) => r.push_sent_at == null && !claimedIds.has(r.id)
@@ -80,11 +83,16 @@ const makeSupabaseMock = () => {
   };
 
   return { from: (table) => builder(table) };
-};
+};let supabaseMockInstance = null;
 
 // ─── Module mocks ────────────────────────────────────────────────────────────
 vi.mock("@supabase/supabase-js", () => ({
-  createClient: () => makeSupabaseMock(),
+  createClient: () => {
+    if (!supabaseMockInstance) {
+      supabaseMockInstance = makeSupabaseMock();
+    }
+    return supabaseMockInstance;
+  },
 }));
 
 // Slow sendNotification (~150 ms) to widen the race window
@@ -105,7 +113,10 @@ const buildApp = async () => {
   const app = express();
   app.use(express.json());
   app.post("/dispatch", dispatchPushNotifications);
-  app.use((err, _req, res, _next) => res.status(500).json({ error: err.message }));
+  app.use((err, _req, res, _next) => {
+    console.error("TEST ERROR:", err);
+    return res.status(500).json({ error: err.message });
+  });
   return app;
 };
 
@@ -131,6 +142,7 @@ describe("dispatchPushNotifications — race condition", () => {
       push_claimed_at: null,
     }));
 
+    supabaseMockInstance = makeSupabaseMock();
     app = await buildApp();
   });
 
@@ -184,10 +196,10 @@ describe("dispatchPushNotifications — race condition", () => {
 
   it("claimed notifications remain retryable after subscription fetch error", async () => {
   // Inject a subscription-fetch failure on the first call
-  const supabaseMock = makeSupabaseMock();
+  const supabaseMock = supabaseMockInstance;
   const originalFrom = supabaseMock.from.bind(supabaseMock);
 
-  vi.spyOn(supabaseMock, "from").mockImplementationOnce((table) => {
+  const spy = vi.spyOn(supabaseMock, "from").mockImplementation((table) => {
     if (table === "push_subscriptions") {
       return {
         select: () => ({
@@ -200,7 +212,11 @@ describe("dispatchPushNotifications — race condition", () => {
 
   // First call: subscription fetch fails → should 500
   const res1 = await request(app).post("/dispatch");
+  spy.mockRestore();
   expect(res1.status).toBe(500);
+
+  // Simulate stale claim timeout or rollback by clearing claimedIds in mock DB
+  claimedIds.clear();
 
   // Rows should still be pending (push_sent_at not set)
   const stillPending = dbRows.filter((r) => r.push_sent_at == null);

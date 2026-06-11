@@ -168,3 +168,14 @@ export const matchSchemas = {
     }),
   },
 };
+
+export const reviewSchemas = {
+  submitReview: {
+    body: z.object({
+      sessionId: z.string().trim().uuid("Invalid session ID format"),
+      rating: z.number().int().min(1, "Rating must be at least 1").max(5, "Rating cannot exceed 5"),
+      tags: z.array(z.string()).default([]),
+      comment: z.string().trim().max(300, "Comment must be at most 300 characters").optional().nullable(),
+    }),
+  },
+};

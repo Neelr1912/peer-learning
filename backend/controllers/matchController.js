@@ -127,7 +127,22 @@ export const getRecommendedPartners = async (req, res) => {
         learn_subjects: user.learn_subjects || [],
         compatibilityScore: user.compatibility_score, // Trust the database score
         reason: result.reasons[0] || "You have similar learning interests and compatible skills.",
+        trustScore: Number(user.trust_score || 0),
+        averageRating: Number(user.average_rating || 0),
+        totalReviews: Number(user.total_reviews || 0),
+        mentorBadge: user.mentor_badge || null,
       };
+    });
+
+    // Sort stably by trustScore DESC, averageRating DESC, totalReviews DESC
+    recommendations.sort((a, b) => {
+      if (b.trustScore !== a.trustScore) {
+        return b.trustScore - a.trustScore;
+      }
+      if (b.averageRating !== a.averageRating) {
+        return b.averageRating - a.averageRating;
+      }
+      return b.totalReviews - a.totalReviews;
     });
 
     // In a real paginated RPC, getting exact total Count requires a separate count query. 
