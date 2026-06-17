@@ -128,11 +128,18 @@ export const submitReview = async (req, res, next) => {
       .single();
 
     if (insertError) {
+      if (insertError.code === "23505" || insertError.message?.includes("unique constraint") || insertError.message?.includes("duplicate key")) {
+        return next(new HttpError(409, "You have already submitted a review for this session"));
+      }
       return next(new HttpError(500, `Database error inserting review: ${insertError.message}`));
     }
 
     // 9. Recalculate metrics for reviewee
-    await calculateTrustMetrics(revieweeId);
+    try {
+      await calculateTrustMetrics(revieweeId);
+    } catch (metricError) {
+      console.error(`Failed to recalculate trust metrics for user ${revieweeId}:`, metricError);
+    }
 
     res.status(201).json({
       success: true,

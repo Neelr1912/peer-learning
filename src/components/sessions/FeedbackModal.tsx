@@ -121,7 +121,12 @@ export function FeedbackModal({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+      <div 
+        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-title"
+      >
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 15 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -146,7 +151,7 @@ export function FeedbackModal({
           ) : (
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
-                <h3 className="text-2xl font-bold tracking-tight mb-1">
+                <h3 id="modal-title" className="text-2xl font-bold tracking-tight mb-1">
                   Rate Session Peer
                 </h3>
                 <p className="text-sm text-slate-400">
@@ -162,28 +167,37 @@ export function FeedbackModal({
               )}
 
               {/* Star Rating */}
-              <div className="flex flex-col items-center justify-center gap-2 p-4 rounded-2xl bg-white/5 border border-white/5">
+              <div 
+                className="flex flex-col items-center justify-center gap-2 p-4 rounded-2xl bg-white/5 border border-white/5"
+                role="group"
+                aria-label="Star Rating Selection"
+              >
                 <span className="text-sm text-gray-400 font-semibold">How was your session?</span>
                 <div className="flex items-center gap-2">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <button
-                      key={star}
-                      type="button"
-                      onClick={() => setRating(star)}
-                      onMouseEnter={() => setHoverRating(star)}
-                      onMouseLeave={() => setHoverRating(0)}
-                      className="transition-transform active:scale-95"
-                    >
-                      <Star
-                        size={36}
-                        className={`transition-colors ${
-                          star <= (hoverRating || rating)
-                            ? "fill-amber-400 text-amber-400"
-                            : "text-gray-600"
-                        }`}
-                      />
-                    </button>
-                  ))}
+                  {[1, 2, 3, 4, 5].map((star) => {
+                    const isSelected = star <= rating;
+                    return (
+                      <button
+                        key={star}
+                        type="button"
+                        onClick={() => setRating(star)}
+                        onMouseEnter={() => setHoverRating(star)}
+                        onMouseLeave={() => setHoverRating(0)}
+                        className="transition-transform active:scale-95"
+                        aria-label={`Rate ${star} star${star > 1 ? "s" : ""}`}
+                        aria-pressed={isSelected}
+                      >
+                        <Star
+                          size={36}
+                          className={`transition-colors ${
+                            star <= (hoverRating || rating)
+                              ? "fill-amber-400 text-amber-400"
+                              : "text-gray-600"
+                          }`}
+                        />
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -192,7 +206,7 @@ export function FeedbackModal({
                 <span className="text-sm text-gray-400 font-semibold block">Select Feedback Tags</span>
 
                 {/* Positive Tags */}
-                <div className="space-y-1.5">
+                <div className="space-y-1.5" role="group" aria-label="Positive feedback tags">
                   <span className="text-xs text-emerald-400 font-medium">Positive</span>
                   <div className="flex flex-wrap gap-2">
                     {POSITIVE_TAGS.map((tag) => {
@@ -207,6 +221,8 @@ export function FeedbackModal({
                               ? "bg-emerald-500/20 border-emerald-400 text-emerald-200"
                               : "bg-white/5 border-white/10 text-slate-300 hover:bg-white/10"
                           }`}
+                          aria-pressed={selected}
+                          aria-label={`Feedback tag: ${tag}`}
                         >
                           {tag}
                         </button>
@@ -216,7 +232,7 @@ export function FeedbackModal({
                 </div>
 
                 {/* Neutral Tags */}
-                <div className="space-y-1.5">
+                <div className="space-y-1.5" role="group" aria-label="Neutral feedback tags">
                   <span className="text-xs text-amber-400 font-medium">Neutral</span>
                   <div className="flex flex-wrap gap-2">
                     {NEUTRAL_TAGS.map((tag) => {
@@ -231,6 +247,8 @@ export function FeedbackModal({
                               ? "bg-amber-500/20 border-amber-400 text-amber-200"
                               : "bg-white/5 border-white/10 text-slate-300 hover:bg-white/10"
                           }`}
+                          aria-pressed={selected}
+                          aria-label={`Feedback tag: ${tag}`}
                         >
                           {tag}
                         </button>
@@ -240,7 +258,7 @@ export function FeedbackModal({
                 </div>
 
                 {/* Negative Tags */}
-                <div className="space-y-1.5">
+                <div className="space-y-1.5" role="group" aria-label="Negative feedback tags">
                   <span className="text-xs text-rose-400 font-medium">Negative</span>
                   <div className="flex flex-wrap gap-2">
                     {NEGATIVE_TAGS.map((tag) => {
@@ -255,6 +273,8 @@ export function FeedbackModal({
                               ? "bg-rose-500/20 border-rose-400 text-rose-200"
                               : "bg-white/5 border-white/10 text-slate-300 hover:bg-white/10"
                           }`}
+                          aria-pressed={selected}
+                          aria-label={`Feedback tag: ${tag}`}
                         >
                           {tag}
                         </button>

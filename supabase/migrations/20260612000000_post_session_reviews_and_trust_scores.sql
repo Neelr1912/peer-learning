@@ -44,7 +44,7 @@ ALTER TABLE public.profiles
     ADD COLUMN IF NOT EXISTS negative_tags_count INTEGER DEFAULT 0 NOT NULL,
     ADD COLUMN IF NOT EXISTS mentor_badge TEXT DEFAULT NULL;
 
--- 6. Redefine match_users to return trust metrics
+-- 6. Redefine match_users to return trust metrics and mentor badge
 CREATE OR REPLACE FUNCTION match_users(
     target_email text,
     target_skills text[],
@@ -64,7 +64,8 @@ CREATE OR REPLACE FUNCTION match_users(
     compatibility_score int,
     trust_score numeric,
     average_rating numeric,
-    total_reviews int
+    total_reviews int,
+    mentor_badge text
 ) LANGUAGE plpgsql AS $$
 BEGIN
     RETURN QUERY
@@ -84,7 +85,8 @@ BEGIN
         )::int AS compatibility_score,
         p.trust_score,
         p.average_rating,
-        p.total_reviews
+        p.total_reviews,
+        p.mentor_badge
     FROM profiles p
     WHERE p.email != target_email
     ORDER BY compatibility_score DESC

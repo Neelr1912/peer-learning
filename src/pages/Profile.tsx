@@ -51,52 +51,79 @@ const Profile = () => {
 
   // FETCH PROFILE
   useEffect(() => {
-    const fetchReviews = async (uid: string) => {
+    const fetchReviews = async (uid: string, token: string) => {
       setLoadingReviews(true);
       try {
-        const data = await safeFetchJson<any[]>(`/api/users/${uid}/reviews`);
+        const data = await safeFetchJson<any[]>(`/api/users/${uid}/reviews`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
         if (data) {
           setReviews(data);
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error("Failed to fetch reviews:", err);
+        if (err.status === 401 || err.status === 403) {
+          toast.error("Your session has expired. Please log in again to view reviews.");
+        } else {
+          toast.error("Failed to load reviews.");
+        }
       } finally {
         setLoadingReviews(false);
       }
     };
 
     const fetchProfile = async () => {
-      const { data } = await supabase.auth.getSession();
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        if (error) {
+          toast.error("Failed to retrieve session: " + error.message);
+          return;
+        }
 
-      const user = data?.session?.user;
+        const session = data?.session;
+        const user = session?.user;
 
-      if (!user) return;
+        if (!user || !session) {
+          toast.error("You must be logged in to view your profile.");
+          return;
+        }
 
-      const { data: rawProfileData } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user.id)
-        .single();
+        const { data: rawProfileData, error: profileErr } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", user.id)
+          .single();
 
-      const profileData = rawProfileData as any;
+        if (profileErr) {
+          toast.error("Failed to load profile data: " + profileErr.message);
+          return;
+        }
 
-      if (profileData) {
-        setProfile({
-          name: profileData.name || "",
-          bio: profileData.bio || "",
-          skills: profileData.skills?.join(", ") || "",
-          avatar_url: profileData.avatar_url || avatars[0],
-          streak: profileData.streak || 0,
-          xp: profileData.points || 0,
-          level: calculateLevel(profileData.points || 0),
-          badge: getBadgeByXP(profileData.points || 0),
-          achievements: getAchievements(profileData.points || 0),
-          trustScore: profileData.trust_score || 0,
-          totalReviews: profileData.total_reviews || 0,
-          averageRating: profileData.average_rating || 0,
-          mentorBadge: profileData.mentor_badge || null,
-        });
-        fetchReviews(user.id);
+        const profileData = rawProfileData as any;
+
+        if (profileData) {
+          setProfile({
+            name: profileData.name || "",
+            bio: profileData.bio || "",
+            skills: profileData.skills?.join(", ") || "",
+            avatar_url: profileData.avatar_url || avatars[0],
+            streak: profileData.streak || 0,
+            xp: profileData.points || 0,
+            level: calculateLevel(profileData.points || 0),
+            badge: getBadgeByXP(profileData.points || 0),
+            achievements: getAchievements(profileData.points || 0),
+            trustScore: profileData.trust_score || 0,
+            totalReviews: profileData.total_reviews || 0,
+            averageRating: profileData.average_rating || 0,
+            mentorBadge: profileData.mentor_badge || null,
+          });
+          fetchReviews(user.id, session.access_token);
+        }
+      } catch (err: any) {
+        console.error("Authentication or load error:", err);
+        toast.error("An error occurred loading profile: " + err.message);
       }
     };
 

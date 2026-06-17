@@ -120,8 +120,8 @@ export const calculateTrustMetrics = async (userId) => {
     mentorBadge = calculateMentorBadge(trustScore, totalReviews);
   }
 
-  // Update profile in the database
-  const { error: updateError } = await supabase
+  // Update profile in the database only if this calculation is newer/has more reviews
+  let updateQuery = supabase
     .from("profiles")
     .update({
       trust_score: trustScore,
@@ -132,6 +132,14 @@ export const calculateTrustMetrics = async (userId) => {
       mentor_badge: mentorBadge,
     })
     .eq("id", userId);
+
+  if (totalReviews > 0) {
+    updateQuery = updateQuery.lt("total_reviews", totalReviews);
+  } else {
+    updateQuery = updateQuery.eq("total_reviews", 0);
+  }
+
+  const { error: updateError } = await updateQuery;
 
   if (updateError) {
     throw new Error(`Failed to update profile metrics: ${updateError.message}`);

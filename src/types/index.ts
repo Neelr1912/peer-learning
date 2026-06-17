@@ -50,7 +50,7 @@ export interface SessionReview {
   revieweeId: string;
   rating: number;
   tags: string[];
-  comment?: string;
+  comment?: string | null;
   createdAt: string;
   reviewerName?: string;
   reviewerAvatar?: string;
